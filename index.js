@@ -86,14 +86,15 @@ const orderSchema = new mongoose.Schema({
 });
 const Order = mongoose.model('Order', orderSchema);
 
-// Route registration with error handling
+// Enhanced route registration with immediate error catching
 const registerRoute = (method, path, handler) => {
   try {
-    console.log(`Registering route: ${method} ${path}`);
+    console.log(`Attempting to register route: ${method} ${path}`);
     app[method.toLowerCase()](path, handler);
+    console.log(`Successfully registered route: ${method} ${path}`);
   } catch (err) {
-    console.error(`Error registering route ${method} ${path}:`, err.message);
-    process.exit(1);
+    console.error(`Failed to register route ${method} ${path}: ${err.message}`);
+    process.exit(1); // Exit immediately to highlight the problematic route
   }
 };
 
@@ -123,8 +124,7 @@ registerRoute('POST', '/upload', async (req, res) => {
 
     const params = {
       Bucket: process.env.AWS_BUCKET,
-      Key: `${
-        Date.now()}.${type}`,
+      Key: `${Date.now()}.${type}`,
       Body: base64Data,
       ContentType: `image/${type}`,
       ACL: 'public-read'
@@ -132,7 +132,7 @@ registerRoute('POST', '/upload', async (req, res) => {
 
     const { Location } = await s3.upload(params).promise();
     const newImage = new Image({
-      url: tia,
+      url: Location,
       name,
       price: parsedPrice,
       description: description || ''
@@ -477,7 +477,6 @@ registerRoute('GET', '/admin/users', async (req, res) => {
   }
 });
 
-// Catch-All Route for 404
 registerRoute('ALL', '/*path', (req, res) => {
   res.status(404).json({ error: `Not found: ${req.originalUrl}` });
 });
