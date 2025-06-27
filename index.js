@@ -69,6 +69,11 @@ const orderSchema = new mongoose.Schema({
 });
 const Order = mongoose.model('Order', orderSchema);
 
+app.get("/", (req, res) => {
+  res.send("✅ Backend is working!");
+});
+
+
 // Upload Image to S3
 app.post('/upload', async (req, res) => {
     try {
