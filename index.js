@@ -20,15 +20,17 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like Postman)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
     }
   },
-  credentials: true // Optional: only if you're using cookies/auth
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true
 }));
+app.options("*", cors()); // handles preflight requests
 
 
 mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
