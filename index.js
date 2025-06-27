@@ -4,6 +4,7 @@ const AWS = require('aws-sdk');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const bcrypt = require('bcrypt');
+const listEndpoints = require('express-list-endpoints'); // Added for debugging
 
 dotenv.config();
 
@@ -22,7 +23,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
-app.options('*', cors()); // Handle preflight requests for all routes
+app.options('*', cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
@@ -481,6 +482,14 @@ app.get('/admin/users', async (req, res) => {
     res.status(500).json({ error: 'Fetch failed', details: err.message });
   }
 });
+
+// Catch-All Route for 404
+app.all('/*path', (req, res) => {
+  res.status(404).json({ error: `Not found: ${req.originalUrl}` });
+});
+
+// Log all registered routes for debugging
+console.log('Registered routes:', listEndpoints(app));
 
 // Start Server
 const PORT = process.env.PORT || 5000;
