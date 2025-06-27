@@ -4,7 +4,6 @@ const AWS = require('aws-sdk');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const bcrypt = require('bcrypt');
-const listEndpoints = require('express-list-endpoints'); // Added for debugging
 
 dotenv.config();
 
@@ -45,7 +44,7 @@ const s3 = new AWS.S3({
   region: 'eu-north-1'
 });
 
-// User Schema
+// Schemas
 const userSchema = new mongoose.Schema({
   firstName: { type: String, required: true },
   secondName: { type: String, required: true },
@@ -55,7 +54,6 @@ const userSchema = new mongoose.Schema({
 });
 const userModel = mongoose.model('User', userSchema);
 
-// Admin Schema
 const adminSchema = new mongoose.Schema({
   firstName: { type: String, required: true },
   secondName: { type: String, required: true },
@@ -65,7 +63,6 @@ const adminSchema = new mongoose.Schema({
 });
 const adminModel = mongoose.model('Admin', adminSchema);
 
-// Image Schema
 const imageSchema = new mongoose.Schema({
   url: { type: String, required: true },
   name: { type: String, required: true },
@@ -74,7 +71,6 @@ const imageSchema = new mongoose.Schema({
 });
 const Image = mongoose.model('Image', imageSchema);
 
-// Order Schema
 const orderSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   products: [{
@@ -90,13 +86,23 @@ const orderSchema = new mongoose.Schema({
 });
 const Order = mongoose.model('Order', orderSchema);
 
+// Route registration with error handling
+const registerRoute = (method, path, handler) => {
+  try {
+    console.log(`Registering route: ${method} ${path}`);
+    app[method.toLowerCase()](path, handler);
+  } catch (err) {
+    console.error(`Error registering route ${method} ${path}:`, err.message);
+    process.exit(1);
+  }
+};
+
 // Routes
-app.get('/', (req, res) => {
+registerRoute('GET', '/', (req, res) => {
   res.send('✅ Backend is working!');
 });
 
-// Upload Image to S3
-app.post('/upload', async (req, res) => {
+registerRoute('POST', '/upload', async (req, res) => {
   try {
     const { image, name, price, description } = req.body;
     if (!image || !name || price === undefined) {
@@ -117,7 +123,8 @@ app.post('/upload', async (req, res) => {
 
     const params = {
       Bucket: process.env.AWS_BUCKET,
-      Key: `${Date.now()}.${type}`,
+      Key: `${
+        Date.now()}.${type}`,
       Body: base64Data,
       ContentType: `image/${type}`,
       ACL: 'public-read'
@@ -125,7 +132,7 @@ app.post('/upload', async (req, res) => {
 
     const { Location } = await s3.upload(params).promise();
     const newImage = new Image({
-      url: Location,
+      url: tia,
       name,
       price: parsedPrice,
       description: description || ''
@@ -139,8 +146,7 @@ app.post('/upload', async (req, res) => {
   }
 });
 
-// Fetch All Images
-app.get('/images', async (req, res) => {
+registerRoute('GET', '/images', async (req, res) => {
   try {
     const images = await Image.find();
     res.json(images);
@@ -150,8 +156,7 @@ app.get('/images', async (req, res) => {
   }
 });
 
-// Fetch Images by IDs
-app.post('/cart-items', async (req, res) => {
+registerRoute('POST', '/cart-items', async (req, res) => {
   try {
     const { ids } = req.body;
     if (!Array.isArray(ids)) {
@@ -165,8 +170,7 @@ app.post('/cart-items', async (req, res) => {
   }
 });
 
-// Delete Image
-app.delete('/delete-image/:id', async (req, res) => {
+registerRoute('DELETE', '/delete-image/:id', async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -198,8 +202,7 @@ app.delete('/delete-image/:id', async (req, res) => {
   }
 });
 
-// Create Admin
-app.post('/create-admins', async (req, res) => {
+registerRoute('POST', '/create-admins', async (req, res) => {
   try {
     const { firstName, secondName, email, password, profilePicture } = req.body;
     if (!firstName || !secondName || !email || !password) {
@@ -246,8 +249,7 @@ app.post('/create-admins', async (req, res) => {
   }
 });
 
-// Admin Login
-app.post('/admin-login', async (req, res) => {
+registerRoute('POST', '/admin-login', async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -278,8 +280,7 @@ app.post('/admin-login', async (req, res) => {
   }
 });
 
-// Admin Profile
-app.get('/admin/profile', async (req, res) => {
+registerRoute('GET', '/admin/profile', async (req, res) => {
   try {
     const { email } = req.query;
     if (!email) {
@@ -298,8 +299,7 @@ app.get('/admin/profile', async (req, res) => {
   }
 });
 
-// Get All Admins
-app.get('/admin/admins', async (req, res) => {
+registerRoute('GET', '/admin/admins', async (req, res) => {
   try {
     const admins = await adminModel.find({}, '-password');
     res.json(admins);
@@ -309,8 +309,7 @@ app.get('/admin/admins', async (req, res) => {
   }
 });
 
-// Create User
-app.post('/create-users', async (req, res) => {
+registerRoute('POST', '/create-users', async (req, res) => {
   try {
     const { firstName, secondName, email, password, profilePicture } = req.body;
     if (!firstName || !secondName || !email || !password) {
@@ -357,8 +356,7 @@ app.post('/create-users', async (req, res) => {
   }
 });
 
-// User Login
-app.post('/user-login', async (req, res) => {
+registerRoute('POST', '/user-login', async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -391,8 +389,7 @@ app.post('/user-login', async (req, res) => {
   }
 });
 
-// Create Order
-app.post('/create-order', async (req, res) => {
+registerRoute('POST', '/create-order', async (req, res) => {
   try {
     const { userId, products, name, address, paymentType, amount } = req.body;
     if (!userId || !products || !name || !address || !paymentType || !amount) {
@@ -439,8 +436,7 @@ app.post('/create-order', async (req, res) => {
   }
 });
 
-// Get All Orders
-app.get('/orders', async (req, res) => {
+registerRoute('GET', '/orders', async (req, res) => {
   try {
     const orders = await Order.find()
       .populate('userId', 'firstName secondName email')
@@ -452,8 +448,7 @@ app.get('/orders', async (req, res) => {
   }
 });
 
-// Get Order by ID
-app.get('/order/:id', async (req, res) => {
+registerRoute('GET', '/order/:id', async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -472,8 +467,7 @@ app.get('/order/:id', async (req, res) => {
   }
 });
 
-// Get All Users
-app.get('/admin/users', async (req, res) => {
+registerRoute('GET', '/admin/users', async (req, res) => {
   try {
     const users = await userModel.find({}, '-password');
     res.json(users);
@@ -484,12 +478,9 @@ app.get('/admin/users', async (req, res) => {
 });
 
 // Catch-All Route for 404
-app.all('/*path', (req, res) => {
+registerRoute('ALL', '/*path', (req, res) => {
   res.status(404).json({ error: `Not found: ${req.originalUrl}` });
 });
-
-// Log all registered routes for debugging
-console.log('Registered routes:', listEndpoints(app));
 
 // Start Server
 const PORT = process.env.PORT || 5000;
