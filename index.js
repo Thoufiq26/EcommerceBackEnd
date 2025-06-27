@@ -12,7 +12,24 @@ const app = express();
 // Middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
-app.use(cors());
+// ✅ Allow both frontend URLs
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://ecommercefrontend-j99k.onrender.com"
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like Postman)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true // Optional: only if you're using cookies/auth
+}));
+
 
 mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log('MongoDB connected'))
